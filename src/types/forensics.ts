@@ -1,0 +1,9 @@
+export type PropertyStatus = 'present' | 'empty' | 'missing' | 'error'
+export type ExtractedProperty = { label: string; value: string | null; status: PropertyStatus; source: string; locator: string; type?: string }
+export type PackageEntry = { path: string; compressedSize: number; uncompressedSize: number; method: number; offset: number; crc: number }
+export type Revision = { kind: 'insertion' | 'deletion'; author: string | null; date: string | null; source: string }
+export type Comment = { id: string | null; author: string | null; date: string | null; text: string; source: string }
+export type Structure = { paragraphs: number; runs: number; hyperlinks: number; styles: { name: string; count: number }[]; revisions: Revision[]; comments: Comment[]; media: string[]; embedded: string[]; settings: ExtractedProperty[] }
+export type AnalysisWarning = { source: string; message: string }
+export type EvidenceFinding = { category: 'Directly observed' | 'Context-dependent' | 'Inconclusive' | 'Not available'; text: string; source: string }
+export type Analysis = { filename: string; size: number; entries: PackageEntry[]; core: ExtractedProperty[]; extended: ExtractedProperty[]; custom: ExtractedProperty[]; structure: Structure; xml: Record<string, string>; warnings: AnalysisWarning[]; findings: EvidenceFinding[]; interval: string | null }

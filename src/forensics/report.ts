@@ -1,0 +1,23 @@
+import type { Analysis } from '../types/forensics'
+
+export function download(data: BlobPart, filename: string, type: string) {
+  const url = URL.createObjectURL(new Blob([data], { type }))
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!)
+export function exportJson(analysis: Analysis, history: string) {
+  download(JSON.stringify({ disclaimer: 'Document metadata is contextual forensic evidence, not a validated standalone test of AI authorship.', syntheticKnownHistory: history || null, analysis }, null, 2), 'docx-evidence-report.json', 'application/json')
+}
+export function exportHtml(analysis: Analysis, history: string) {
+  const rows = [...analysis.core, ...analysis.extended, ...analysis.custom, ...analysis.structure.settings].map(item => `<tr><td>${escape(item.label)}</td><td>${escape(item.value ?? 'Not available')}</td><td>${escape(item.status)}</td><td>${escape(item.source)}: ${escape(item.locator)}</td></tr>`).join('')
+  const findings = analysis.findings.map(item => `<li><strong>${escape(item.category)}:</strong> ${escape(item.text)} <small>(${escape(item.source)})</small></li>`).join('')
+  const warnings = analysis.warnings.map(item => `<li>${escape(item.source)}: ${escape(item.message)}</li>`).join('')
+  const revisions = analysis.structure.revisions.map(item => `<li>${escape(item.kind)}; author: ${escape(item.author ?? 'not available')}; date: ${escape(item.date ?? 'not available')}; ${escape(item.source)}</li>`).join('')
+  const comments = analysis.structure.comments.map(item => `<li>Author: ${escape(item.author ?? 'not available')}; date: ${escape(item.date ?? 'not available')}; ${escape(item.text)}; ${escape(item.source)}</li>`).join('')
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DOCX evidence report</title><style>body{font:14px/1.5 sans-serif;max-width:1000px;margin:40px auto;padding:0 20px;color:#172131}h1,h2{color:#172131}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border:1px solid #aaa;padding:7px;text-align:left;overflow-wrap:anywhere}small{color:#555}li{margin:8px 0}@media print{body{margin:0}h2{break-after:avoid}tr{break-inside:avoid}}</style></head><body><h1>DOCX evidence report</h1><p>Document metadata is contextual forensic evidence, not a validated standalone test of AI authorship.</p>${history ? `<p><strong>Synthetic known history (supplied, not inferred):</strong> ${escape(history)}</p>` : ''}<h2>File overview</h2><p>${escape(analysis.filename)}; ${analysis.size} bytes; ${analysis.entries.length} package entries. Standard DOCX package checks passed.</p><h2>Metadata and settings</h2><p>Application statistics are stored values, not independently recalculated.</p><table><thead><tr><th>Property</th><th>Value</th><th>Status</th><th>Source / locator</th></tr></thead><tbody>${rows}</tbody></table><h2>Timeline</h2><p>Stored creation-to-modification interval: ${escape(analysis.interval ?? 'Not available')}. Values can be modified, reset, or inherited and do not establish authorship.</p><h2>Structure</h2><p>${analysis.structure.paragraphs} paragraphs, ${analysis.structure.runs} runs, ${analysis.structure.hyperlinks} hyperlinks; source: word/document.xml. ${analysis.structure.revisions.length} retained changes; ${analysis.structure.comments.length} retained comments. Counts are not typing or clipboard history.</p><p>Styles: ${escape(analysis.structure.styles.map(item => `${item.name} (${item.count})`).join(', ') || 'none found')}. Media: ${escape(analysis.structure.media.join(', ') || 'none found')}. Embedded objects: ${escape(analysis.structure.embedded.join(', ') || 'none found')}.</p><h3>Retained changes</h3><ul>${revisions || '<li>None found in the main document.</li>'}</ul><h3>Comments</h3><ul>${comments || '<li>None found in the parsed comments part.</li>'}</ul><h2>Interpretation</h2><ul>${findings}</ul><h2>Warnings</h2><ul>${warnings || '<li>None.</li>'}</ul><h2>Package inventory</h2><ul>${analysis.entries.map(item => `<li>${escape(item.path)} (${item.uncompressedSize} bytes)</li>`).join('')}</ul></body></html>`
+  download(html, 'docx-evidence-report.html', 'text/html')
+}
